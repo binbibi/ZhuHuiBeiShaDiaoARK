@@ -61,6 +61,10 @@
 
 #define IOCTL_ENUMDIRPISPATCH		CTL_CODE(FILE_DEVICE_UNKNOWN, 0x809, METHOD_BUFFERED, FILE_ANY_ACCESS) //Enum irp DisPatch
 
+#define IOCTL_GetSssdtFuncAddr	CTL_CODE(FILE_DEVICE_UNKNOWN, 0x810, METHOD_BUFFERED, FILE_ANY_ACCESS) //Get sssdt func addr
+
+#define IOCTL_GetW32pServiceTable CTL_CODE(FILE_DEVICE_UNKNOWN, 0x811, METHOD_BUFFERED, FILE_ANY_ACCESS) //Get W32pServiceTable
+
 
 extern  HANDLE g_device;
 extern  DWORD g_CurSelectPid;
@@ -80,9 +84,25 @@ extern BOOL ARKDeviceIoControl(DWORD dwContryolCode,LPVOID inBuff, DWORD inBuffS
 extern BOOL GetFileInfo(WCHAR *pszFileFullPath, PWCHAR pszFileCorporation);
 extern void LookFileAttrubute(WCHAR* FileFullName);
 extern ULONG CheckFileTrust(WCHAR* FileName,BOOL IsCheckAll,int subItem,BOOL IsShowNoSing);
+extern ULONG64 GetWin32kImageBase();
+extern CHAR *LoadDllContext(char *filename);
+extern DWORD FileLen(char *filename);
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
+#endif
+#ifndef STATUS_SUCCESS
+#define STATUS_SUCCESS       ((NTSTATUS)0x00000000L)
+#endif
+#ifndef STATUS_UNSUCCESSFUL
+#define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
+#endif
 
 #ifndef NTAPI_H_
 #define NTAPI_H_
+
+#define SystemModuleInformation 11
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
 
 typedef struct _SYSTEM_MODULE_INFORMATION_ENTRY
 {

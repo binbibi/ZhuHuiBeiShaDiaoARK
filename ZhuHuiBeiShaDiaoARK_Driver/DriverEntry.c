@@ -57,9 +57,11 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	ULONGLONG Eprocess = 0;
 	//ULONGLONG ssdt_func_addr = 0;
 	wchar_t *outbuff = (wchar_t*)ExAllocatePool(NonPagedPool,260*2);//传出W字符
-	SSDT_INFO ssdt_addr_info = {0};
-	
+	SSDT_INFO ssdt_addr_info = { 0 };
+	PSSSDT_INFO psssdt_info = ExAllocatePool(NonPagedPool, sizeof(SSSDT_INFO));
+	SYSTEM_MODULE sysmodule = { 0 };
 	ULONG Inbuff;
+	ULONG64 Inbuff64;
 	UNICODE_STRING UnString;
 	WCHAR *Instrbuff = NULL;//(WCHAR*)ExAllocatePool(NonPagedPool,260);//传入W字符
 
@@ -167,21 +169,32 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 		}
 		case IOVTL_GETSSDTFUCADDR:
 			{
+				if (uInSize > 4)
+				{
+					status = STATUS_BUFFER_TOO_SMALL;
+					break;
+				}
 				Inbuff = *(ULONG*)pIoBuffer;
 				//DbgPrint("input func index :%d\n",Inbuff);
 				//ssdt_func_addr = get_ssdt_func_addr(Inbuff);
 				ssdt_addr_info.cut_addr = get_ssdt_func_addr(Inbuff);
 				ssdt_addr_info.org_addr = get_ssdt_org_addr(Inbuff);
+
+				if (NT_SUCCESS(getSystemImageInfoByAddress(ssdt_addr_info.cut_addr, &sysmodule)) &&
+					strlen(sysmodule.ImageName) < MAX_PATH)
+				{
+					RtlCopyMemory(ssdt_addr_info.imgPath, sysmodule.ImageName, 256);
+				}
 				//DbgPrint("%p---%p\n",ssdt_addr_info.cut_addr,ssdt_addr_info.org_addr);
 				RtlCopyMemory(
 					pIrp->AssociatedIrp.SystemBuffer,
 					&ssdt_addr_info,
 					sizeof(SSDT_INFO))
 					;
+
 				status = STATUS_SUCCESS;
 				break;
 			}
-			break;
 		case IOCTL_ENUMHANDLE:
 			{
 				Inbuff = *(ULONG*)pIoBuffer; //pid
@@ -299,7 +312,102 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 
 				break;
 			}
+		case IOCTL_GetSssdtFuncAddr:
+			{
+				if (uInSize > 8)
+				{
+					status = STATUS_BUFFER_TOO_SMALL;
+					break;
+				}
+
+				if (uOutSize < sizeof(SSSDT_INFO))
+				{
+					status = STATUS_BUFFER_OVERFLOW;
+					break;
+				}
+				Inbuff64 = *(ULONG64*)pIoBuffer;
+				if (g_guiProcess == NULL)
+					g_guiProcess = GetGuiProcess(FALSE);
+				if (g_guiProcess == NULL)
+				{
+					status = STATUS_UNSUCCESSFUL;
+					break;
+				}
+
+				
+
+				if (psssdt_info == NULL)
+				{
+					status = STATUS_UNSUCCESSFUL;
+					break;
+				}
+
+				memset(psssdt_info,0,sizeof(SSSDT_INFO));
+
+				__try {
+					KeAttachProcess(g_guiProcess);
+					GetSSSDTFuncCurAddr64(1001);
+					KeDetachProcess();
+				}
+				__except (1)
+				{
+					g_guiProcess = GetGuiProcess(TRUE);
+				}
+
+				__try {
+					KeAttachProcess(g_guiProcess);
+					psssdt_info->Address = GetSSSDTFuncCurAddr64(Inbuff64);
+					KeDetachProcess();
+
+					if (NT_SUCCESS(getSystemImageInfoByAddress(psssdt_info->Address, &sysmodule)) &&
+						strlen(sysmodule.ImageName) < MAX_PATH)
+					{
+						RtlCopyMemory(psssdt_info->ImgPath, sysmodule.ImageName, 256);
+					}
+
+					RtlCopyMemory(
+						pIrp->AssociatedIrp.SystemBuffer,
+						psssdt_info,
+						sizeof(SSSDT_INFO)
+					);
+
+					status = STATUS_SUCCESS;
+					break;
+
+				}
+				__except (1)
+				{
+					status = STATUS_UNSUCCESSFUL;
+				}
+			}
+		case IOCTL_GetW32pServiceTable:
+		{
+			if (uOutSize > 8)
+			{
+				status = STATUS_BUFFER_OVERFLOW;
+				break;
+			}
+
+			// 必须是GUI线程 !!!
+			GetSSSDTFuncCurAddr64(1001);
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					&ul64W32pServiceTable,
+					8);
+				status = STATUS_SUCCESS;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
 			break;
+		}
+		break;
 	}
 	if(status == STATUS_SUCCESS)
 		pIrp->IoStatus.Information = uOutSize;
@@ -308,7 +416,10 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	pIrp->IoStatus.Status = status;
 	IoCompleteRequest(pIrp, IO_NO_INCREMENT);
 	ExFreePool(outbuff);
-
+	if (psssdt_info)
+	{
+		ExFreePool(psssdt_info);
+	}
 	//ExFreePool(Instrbuff); //释放就蓝屏??? 原因是想释放systembuff
 	return status;
 }
@@ -317,18 +428,27 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	UNICODE_STRING ustrLinkName;
-	UNICODE_STRING ustrDevName;  
+	UNICODE_STRING ustrDevName;
 	PDEVICE_OBJECT pDevObj;
 
 	UNREFERENCED_PARAMETER(pRegistryString);
 	g_DriverObject = pDriverObj;
-	if(!get_ssdt_info_init())
+	if (!get_ssdt_info_init())
 	{
 		DbgPrint("ssdt init faild!\n");
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	DbgPrint("ssdtbase:0x%llx",(ULONG64)KeServiceDescriptorTable);
+	DbgPrint("ssdtbase:0x%llx\n", (ULONG64)KeServiceDescriptorTable);
+	KeServiceDescriptorTableShadow = (PSYSTEM_SERVICE_TABLE)GetKeServiceDescriptorTableShadow64();
+	DbgPrint("SSSDT: %llx\n", (ULONG64)KeServiceDescriptorTableShadow);
+
+	g_guiProcess = GetGuiProcess(FALSE);
+	if (g_guiProcess == NULL)
+	{
+		DbgPrint("GetGuiProcess faild !\n");
+		return STATUS_UNSUCCESSFUL;
+	}
 
 	//
 	pDriverObj->MajorFunction[IRP_MJ_CREATE] = DispatchCreate;

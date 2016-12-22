@@ -397,3 +397,44 @@ ULONG CheckFileTrust(WCHAR* FileName,BOOL IsCheckAll,int subItem,BOOL IsShowNoSi
     delete[] pszMemberTag;
     return bRet;
 }
+
+
+DWORD FileLen(char *filename)
+{
+	WIN32_FIND_DATAA fileInfo = { 0 };
+	DWORD fileSize = 0;
+	HANDLE hFind;
+	hFind = FindFirstFileA(filename, &fileInfo);
+	if (hFind != INVALID_HANDLE_VALUE)
+	{
+		fileSize = fileInfo.nFileSizeLow;
+		FindClose(hFind);
+	}
+	return fileSize;
+}
+
+CHAR *LoadDllContext(char *filename)
+{
+	DWORD dwReadWrite, LenOfFile = FileLen(filename);
+	HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+	if (hFile != INVALID_HANDLE_VALUE)
+	{
+		PCHAR buffer = (PCHAR)malloc(LenOfFile);
+		SetFilePointer(hFile, 0, 0, FILE_BEGIN);
+		ReadFile(hFile, buffer, LenOfFile, &dwReadWrite, 0);
+		CloseHandle(hFile);
+		return buffer;
+	}
+	return NULL;
+}
+
+ULONG64 GetWin32kImageBase()
+{
+	PIMAGE_NT_HEADERS64 pinths64;
+	PIMAGE_DOS_HEADER pdih;
+	char *NtosFileData = NULL;
+	NtosFileData = LoadDllContext("c:\\win32k.dll");
+	pdih = (PIMAGE_DOS_HEADER)NtosFileData;
+	pinths64 = (PIMAGE_NT_HEADERS64)(NtosFileData + pdih->e_lfanew);
+	return pinths64->OptionalHeader.ImageBase;
+}

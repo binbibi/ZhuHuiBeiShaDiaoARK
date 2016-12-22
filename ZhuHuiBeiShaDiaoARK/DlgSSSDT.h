@@ -1,4 +1,5 @@
 #pragma once
+#include "afxcmn.h"
 
 
 // CDlgSSSDT 对话框
@@ -18,4 +19,10 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
+public:
+	CListCtrl m_list_sssdt;
+	virtual BOOL OnInitDialog();
+	void EnumSssdt();
+	BOOLEAN GetSssdtOrgAddress();
+	ULONG64 GetWin32kBase();
 };

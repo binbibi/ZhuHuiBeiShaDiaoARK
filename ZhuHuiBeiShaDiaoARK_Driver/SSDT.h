@@ -14,11 +14,22 @@ typedef struct _SYSTEM_SERVICE_TABLE{
 
 PSYSTEM_SERVICE_TABLE KeServiceDescriptorTable;
 
+PSYSTEM_SERVICE_TABLE KeServiceDescriptorTableShadow = 0;
+ULONG64	ul64W32pServiceTable = 0;
+PEPROCESS g_guiProcess = NULL;
+
 typedef struct _SSDT_INFO
 {
 	ULONG64 cut_addr;
 	ULONG64 org_addr;
+	CHAR	imgPath[MAX_PATH];
 }SSDT_INFO,*PSSDT_INFO;
+
+typedef struct _SSSDT_INFO
+{
+	ULONG64 Address;
+	CHAR	ImgPath[MAX_PATH];
+}SSSDT_INFO, *PSSSDT_INFO;
 
 #pragma intrinsic(__readmsr)
 ULONGLONG MyGetKeServiceDescriptorTable64();
@@ -765,6 +776,124 @@ ULONG64 get_ssdt_func_addr(ULONG index)
 	dwtmp=dwtmp>>4;
 	add=((LONGLONG)dwtmp + (ULONGLONG)ServiceTableBase);//&0xFFFFFFF0;
 	return add;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//		SSSDT
+
+//在WINDBG里查看：
+//ln win32k!W32pServiceTable+((poi(win32k!W32pServiceTable+4*(<syscall nbr>-1000))&0x00000000`ffffffff)>>4)-10000000
+//u win32k!W32pServiceTable+((poi(win32k!W32pServiceTable+4*(Index-0x1000))&0x00000000`ffffffff)>>4)-0x10000000
+//u poi(win32k!W32pServiceTable+4*(1-0x1000))
+//u poi(win32k!W32pServiceTable+4*(1-0x1000))&0x00000000`ffffffff
+//u (poi(win32k!W32pServiceTable+4*(1-0x1000))&0x00000000`ffffffff)>>4
+//u win32k!W32pServiceTable+((poi(win32k!W32pServiceTable+4*(1-0x1000))&0x00000000`ffffffff)>>4)-0x10000000
+//ULONGLONG GetSSSDTFuncCurAddr64(ULONG64 Index)
+//{
+//	ULONGLONG				W32pServiceTable = 0, qwTemp = 0;
+//	LONG 					dwTemp = 0;
+//	PSYSTEM_SERVICE_TABLE	pWin32k;
+//	pWin32k = (PSYSTEM_SERVICE_TABLE)((ULONG64)KeServiceDescriptorTableShadow + sizeof(SYSTEM_SERVICE_TABLE));	//sizeof(SYSTEM_SERVICE_TABLE)
+//	W32pServiceTable = (ULONGLONG)(pWin32k->ServiceTableBase);
+//	ul64W32pServiceTable = W32pServiceTable;
+//	//DbgPrint("W32pServiceTable: %llx",W32pServiceTable);
+//	//DbgPrint("Service Count: %lld",pWin32k->NumberOfServices);
+//	qwTemp = W32pServiceTable + 4 * (Index - 0x1000);	//这里是获得偏移地址的位置，要HOOK的话修改这里即可
+//	dwTemp = *(PLONG)qwTemp;
+//	dwTemp = dwTemp >> 4;
+//	qwTemp = W32pServiceTable + (LONG64)dwTemp;
+//	//DbgPrint("0x%llx\n", qwTemp);
+//	return qwTemp;
+//}
+
+ULONG64 GetSSSDTFuncCurAddr64(ULONG64 index)
+{
+	ULONGLONG				W32pServiceTable = 0, FunctionCount = 0, i = 0, Index = 0;
+	ULONGLONG				qwTemp = 0;
+	LONG					dwTemp;
+	PSYSTEM_SERVICE_TABLE	pWin32k;
+	pWin32k = (PSYSTEM_SERVICE_TABLE)((ULONG64)KeServiceDescriptorTableShadow + 4 * 8);
+	W32pServiceTable = (ULONGLONG)(pWin32k->ServiceTableBase);
+	FunctionCount = pWin32k->NumberOfServices;
+	ul64W32pServiceTable = W32pServiceTable;
+	//DbgPrint("%d\n",FunctionCount);
+	
+	
+	Index = 0x1000 + index;
+		qwTemp = W32pServiceTable + 4 * (Index - 0x1000);	//DbgPrint("qwTemp: %llx",qwTemp);
+		dwTemp = *(PLONG)qwTemp;
+		dwTemp = dwTemp >> 4;
+		qwTemp = W32pServiceTable + (LONG64)dwTemp;
+		/*DbgPrint(
+			"id:%d\r\n"
+			"Address: %llx\r\n", index, qwTemp);*/
+
+		return qwTemp;
+	
+}
+
+ULONGLONG GetKeServiceDescriptorTableShadow64()
+{
+	PUCHAR StartSearchAddress = (PUCHAR)__readmsr(0xC0000082);
+	PUCHAR EndSearchAddress = StartSearchAddress + 0x500;
+	PUCHAR i = NULL;
+	UCHAR b1 = 0, b2 = 0, b3 = 0;
+	ULONG templong = 0;
+	ULONGLONG addr = 0;
+	for (i = StartSearchAddress; i<EndSearchAddress; i++)
+	{
+		if (MmIsAddressValid(i) && MmIsAddressValid(i + 1) && MmIsAddressValid(i + 2))
+		{
+			b1 = *i;
+			b2 = *(i + 1);
+			b3 = *(i + 2);
+			if (b1 == 0x4c && b2 == 0x8d && b3 == 0x1d) //4c8d1d
+			{
+				memcpy(&templong, i + 3, 4);
+				addr = (ULONGLONG)templong + (ULONGLONG)i + 7;
+				return addr;
+			}
+		}
+	}
+	return 0;
+}
+
+
+PEPROCESS GetGuiProcess(BOOLEAN bTry)
+{
+	ULONG i = 0;
+	PEPROCESS eproc = NULL;
+	for (i = 4; i<262144; i = i + 4)
+	{
+		eproc = LookupProcess((HANDLE)i);
+		if (eproc != NULL)
+		{
+			ObDereferenceObject(eproc);
+			CHAR *Name = (CHAR*)PsGetProcessImageFileName(eproc);
+			/*if (!_strnicmp("explorer.exe", Name, strlen("explorer.exe")))
+			{
+				DbgPrint("EPROCESS=%p PID=%ld,Name=%s\n", eproc, PsGetProcessId(eproc), PsGetProcessImageFileName(eproc));
+				return eproc;
+			}
+			else */
+			if (bTry)
+			{
+				if (!_strnicmp("explorer.exe", Name, strlen("explorer.exe")))
+				{
+					DbgPrint("EPROCESS=%p PID=%ld,Name=%s\n", eproc, PsGetProcessId(eproc), PsGetProcessImageFileName(eproc));
+					return eproc;
+				}
+			}
+			else if (!_strnicmp("csrss.exe", Name, strlen("csrss.exe")))
+			{
+				DbgPrint("EPROCESS=%p PID=%ld,Name=%s\n", eproc, PsGetProcessId(eproc), PsGetProcessImageFileName(eproc));
+				return eproc;
+			}
+		}
+	}
+	return NULL;
 }
 
 

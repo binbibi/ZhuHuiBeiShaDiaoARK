@@ -14,7 +14,8 @@ typedef struct _SSDT_INFO
 {
 	ULONG64 cut_addr;
 	ULONG64 org_addr;
-}SSDT_INFO,*PSSDT_INFO;
+	CHAR	imgPath[MAX_PATH];
+}SSDT_INFO, *PSSDT_INFO;
 // CDlgSSDT 对话框
 
 IMPLEMENT_DYNAMIC(CDlgSSDT, CPropertyPage)
@@ -97,34 +98,34 @@ BOOL CDlgSSDT::OnInitDialog()
 	return TRUE;
 }
 
-DWORD FileLen(char *filename)
-{
-	WIN32_FIND_DATAA fileInfo={0};
-	DWORD fileSize=0;
-	HANDLE hFind;
-	hFind = FindFirstFileA(filename ,&fileInfo);
-	if(hFind != INVALID_HANDLE_VALUE)
-	{
-		fileSize = fileInfo.nFileSizeLow;
-		FindClose(hFind);
-	}
-	return fileSize;
-}
-
-CHAR *LoadDllContext(char *filename)
-{
-	DWORD dwReadWrite, LenOfFile=FileLen(filename);
-	HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
-	if (hFile != INVALID_HANDLE_VALUE)
-	{
-		PCHAR buffer=(PCHAR)malloc(LenOfFile);
-		SetFilePointer(hFile, 0, 0, FILE_BEGIN);
-		ReadFile(hFile, buffer, LenOfFile, &dwReadWrite, 0);
-		CloseHandle(hFile);
-		return buffer;
-	}
-	return NULL;
-}
+//DWORD FileLen(char *filename)
+//{
+//	WIN32_FIND_DATAA fileInfo={0};
+//	DWORD fileSize=0;
+//	HANDLE hFind;
+//	hFind = FindFirstFileA(filename ,&fileInfo);
+//	if(hFind != INVALID_HANDLE_VALUE)
+//	{
+//		fileSize = fileInfo.nFileSizeLow;
+//		FindClose(hFind);
+//	}
+//	return fileSize;
+//}
+//
+//CHAR *LoadDllContext(char *filename)
+//{
+//	DWORD dwReadWrite, LenOfFile=FileLen(filename);
+//	HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+//	if (hFile != INVALID_HANDLE_VALUE)
+//	{
+//		PCHAR buffer=(PCHAR)malloc(LenOfFile);
+//		SetFilePointer(hFile, 0, 0, FILE_BEGIN);
+//		ReadFile(hFile, buffer, LenOfFile, &dwReadWrite, 0);
+//		CloseHandle(hFile);
+//		return buffer;
+//	}
+//	return NULL;
+//}
 
 DWORD GetSSDTFunctionIndex(char *FunctionName)
 {
@@ -155,6 +156,10 @@ void CDlgSSDT::EnumSSDT(void)
 	SSDT_INFO ssdt_addr_info = {0};
 	CString str;
 	DWORD dwRet = 0;
+	WCHAR	szSysRootBuff[MAX_PATH] = { 0 };
+	CString csSysroot;
+	GetWindowsDirectoryW(szSysRootBuff, MAX_PATH);
+	csSysroot.Format(L"%s", szSysRootBuff);
 	char func_name[MAX_PATH] = {0};
 
 	char func_start[]="ZwAcceptConnectPort", func_end[]="ZwYieldExecution"; //每个函数名之间隔着\0
@@ -202,10 +207,17 @@ void CDlgSSDT::EnumSSDT(void)
 			m_list_ssdt.SetItemText(nIntemNum,3,L"-");
 			str.Format(L"0x%p",ssdt_addr_info.org_addr);
 			m_list_ssdt.SetItemText(nIntemNum,4,str);
-			m_list_ssdt.SetItemText(nIntemNum,5,L"-");
+
+			str.Format(L"%S",ssdt_addr_info.imgPath);
+			str.Replace(L"\\SystemRoot", csSysroot);
+			m_list_ssdt.SetItemText(nIntemNum,5,str);
 			
-			if(ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
-				m_list_ssdt.SetItemTextColor(nIntemNum,RGB(186,12,4),FALSE);
+			if (ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
+			{
+
+				//m_list_ssdt.SetItemTextColor(nIntemNum,RGB(186,12,4),FALSE);
+			}
+				
 
 			/*m_list_ssdt.InsertColumn(1,L"函数名称",0,150);
 			m_list_ssdt.InsertColumn(2,L"当前函数地址",LVCFMT_CENTER,130);
@@ -232,10 +244,17 @@ void CDlgSSDT::EnumSSDT(void)
 			m_list_ssdt.SetItemText(nIntemNum,3,L"-");
 			str.Format(L"0x%p",ssdt_addr_info.org_addr);
 			m_list_ssdt.SetItemText(nIntemNum,4,str);
-			m_list_ssdt.SetItemText(nIntemNum,5,L"-");
 
-			if(ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
-				m_list_ssdt.SetItemTextColor(nIntemNum,RGB(186,12,4),FALSE);
+			str.Format(L"%S", ssdt_addr_info.imgPath);
+			str.Replace(L"\\SystemRoot", csSysroot);
+			m_list_ssdt.SetItemText(nIntemNum,5,str);
+
+			if (ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
+			{
+				m_list_ssdt.SetItemText(nIntemNum, 3, L"!!!!!!!!!!!!!");
+				//m_list_ssdt.SetItemTextColor(nIntemNum, RGB(186, 12, 4), FALSE);
+			}
+				
 			/*if(ssdt_func_ori_addr!=ssdt_func_addr)
 				printf("0x%-0.3X!\t%llx  %llx  %s\n",fn_index,ssdt_func_addr,ssdt_func_ori_addr,ntdlltxt);
 			else
@@ -285,10 +304,17 @@ void CDlgSSDT::EnumSSDT(void)
 	m_list_ssdt.SetItemText(nIntemNum,3,L"-");
 	str.Format(L"0x%p",ssdt_addr_info.org_addr);
 	m_list_ssdt.SetItemText(nIntemNum,4,str);
-	m_list_ssdt.SetItemText(nIntemNum,5,L"-");
 
-	if(ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
-		m_list_ssdt.SetItemTextColor(nIntemNum,RGB(186,12,4),FALSE);
+	str.Format(L"%S", ssdt_addr_info.imgPath);
+	str.Replace(L"\\SystemRoot", csSysroot);
+	m_list_ssdt.SetItemText(nIntemNum, 5, str);
+
+
+	if (ssdt_addr_info.cut_addr != ssdt_addr_info.org_addr)
+	{
+		m_list_ssdt.SetItemText(nIntemNum, 3, L"!!!!!!!!!!!!!");
+		//m_list_ssdt.SetItemTextColor(nIntemNum, RGB(186, 12, 4), FALSE);
+	}
 	//printf("0x%-0.3X\t%llx  %llx  %s\n",fn_index,ssdt_func_addr,ssdt_func_ori_addr,ntdlltxt);
 	ssdt_fun_cnt++;
 	//显示ssdt表上的函数数

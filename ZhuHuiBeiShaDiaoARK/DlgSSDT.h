@@ -21,7 +21,8 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CMyListCtrl m_list_ssdt;
+	//CMyListCtrl m_list_ssdt;
+	CListCtrl m_list_ssdt;
 	virtual BOOL OnInitDialog();
 	static DWORD m_SortColum;  
 	static BOOL m_bAs; 

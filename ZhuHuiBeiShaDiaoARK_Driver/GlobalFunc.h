@@ -180,6 +180,8 @@ NTKERNELAPI PEPROCESS IoThreadToProcess(IN PETHREAD Thread);
 NTKERNELAPI HANDLE PsGetProcessInheritedFromUniqueProcessId( IN PEPROCESS Process);
 NTKERNELAPI PPEB PsGetProcessPeb(PEPROCESS Process);
 NTKERNELAPI PVOID NTAPI PsGetProcessWow64Process(PEPROCESS Process);
+NTKERNELAPI VOID NTAPI KeAttachProcess(PEPROCESS Process);
+NTKERNELAPI VOID NTAPI KeDetachProcess();
 
 NTKERNELAPI 
 NTSTATUS 	
@@ -300,7 +302,6 @@ NTSTATUS getSystemImageInfoByAddress(ULONG_PTR address,SYSTEM_MODULE* __out lpsy
 	NTSTATUS		st;
 	ULONG			count;
 	ULONG_PTR		sizeOfBuf;
-	UNICODE_STRING	usfuncName;
 	SYSTEM_MODULE_INFORMATIONEX*	lpsystemModuleInfo;
 
 	if (MmIsAddressValid(lpsystemModule) == FALSE)

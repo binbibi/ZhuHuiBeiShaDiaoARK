@@ -10,6 +10,8 @@ DWORD g_CurSelectPid = 0;
 BOOL	g_bFirsetRun = FALSE;
 CString g_CurSelectImage;
 CString g_DriverName;
+UCHAR	g_index;
+CString g_ObjectName;
 typedef long (*ZWUNMAPVIEWOFSECTION)(HANDLE,PVOID);
 ZWUNMAPVIEWOFSECTION ZwUnmapViewOfSection;
 

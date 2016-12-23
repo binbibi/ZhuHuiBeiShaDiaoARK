@@ -197,6 +197,8 @@
     <ClInclude Include="DlgKernelHook.h" />
     <ClInclude Include="DlgModuleLooker.h" />
     <ClInclude Include="DlgNetWork.h" />
+    <ClInclude Include="DlgObjectHandleLook.h" />
+    <ClInclude Include="DlgObjectHook.h" />
     <ClInclude Include="DLGPROCESS.h" />
     <ClInclude Include="DlgR3Hook.h" />
     <ClInclude Include="DlgRoot.h" />
@@ -224,6 +226,8 @@
     <ClCompile Include="DlgKernelHook.cpp" />
     <ClCompile Include="DlgModuleLooker.cpp" />
     <ClCompile Include="DlgNetWork.cpp" />
+    <ClCompile Include="DlgObjectHandleLook.cpp" />
+    <ClCompile Include="DlgObjectHook.cpp" />
     <ClCompile Include="DLGPROCESS.cpp" />
     <ClCompile Include="DlgR3Hook.cpp" />
     <ClCompile Include="DlgRoot.cpp" />

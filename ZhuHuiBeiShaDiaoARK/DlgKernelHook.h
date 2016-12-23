@@ -2,6 +2,7 @@
 #include "afxdlgs.h"
 #include "DlgSSDT.h"
 #include "DlgSSSDT.h"
+#include "DlgObjectHook.h"
 
 
 // CDlgKernelHook ¶Ô»°¿ò
@@ -25,6 +26,7 @@ public:
 	CPropertySheet		m_Sheet_KernelHook;
 	CDlgSSDT			m_DlgSSDT;
 	CDlgSSSDT			m_DlgSSSDT;
+	CDlgObjectHook		m_DlgObjectHook;
 	virtual BOOL OnInitDialog();
 	afx_msg void UloadDelFile();
 };

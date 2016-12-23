@@ -7,6 +7,7 @@
 #include "Process.h"
 #include "SSDT.h"
 #include "Driver.h"
+#include "ObjectType.h"
 
 extern	PHANDLE_INFO pHandleInfo;
 
@@ -55,6 +56,7 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	ULONG uInSize;
 	ULONG uOutSize;
 	ULONGLONG Eprocess = 0;
+	PVOID tmp = NULL;
 	//ULONGLONG ssdt_func_addr = 0;
 	wchar_t *outbuff = (wchar_t*)ExAllocatePool(NonPagedPool,260*2);//´«³öW×Ö·û
 	SSDT_INFO ssdt_addr_info = { 0 };
@@ -403,6 +405,84 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 			{
 				status = STATUS_UNSUCCESSFUL;
 				break;
+			}
+
+			break;
+		}
+		case IOCTL_GetObjectInfo:
+		{
+			if (uOutSize < sizeof(OBJECT_TYPE_INFO) * 50)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			EnumObjectTypeInfo(&tmp);
+
+			if (tmp == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			DbgPrint("0x%p\n",tmp);
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					tmp,
+					sizeof(OBJECT_TYPE_INFO) * 50
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(tmp);
+				tmp = NULL;
+				break;
+			}
+			__except (1){
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			break;
+		}
+		case IOCTL_GetObjectProcedureByIndex:
+		{
+			if (uInSize > sizeof(UCHAR))
+			{
+				status = STATUS_BUFFER_OVERFLOW;
+				break;
+			}
+
+			if (uOutSize < sizeof(OBJECT_PROCEDURE_INFO))
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			UCHAR index = *(UCHAR*)pIoBuffer;
+
+			if (!GetObjectProcedureByIndex(index, &tmp))
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					tmp,
+					sizeof(OBJECT_PROCEDURE_INFO)
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(tmp);
+				tmp = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
 			}
 
 			break;

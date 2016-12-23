@@ -65,11 +65,16 @@
 
 #define IOCTL_GetW32pServiceTable CTL_CODE(FILE_DEVICE_UNKNOWN, 0x811, METHOD_BUFFERED, FILE_ANY_ACCESS) //Get W32pServiceTable
 
+#define IOCTL_GetObjectInfo CTL_CODE(FILE_DEVICE_UNKNOWN, 0x812, METHOD_BUFFERED, FILE_ANY_ACCESS) //Get ObjectInfo
+
+#define IOCTL_GetObjectProcedureByIndex CTL_CODE(FILE_DEVICE_UNKNOWN, 0x813, METHOD_BUFFERED, FILE_ANY_ACCESS) //Get Object Procedure
 
 extern  HANDLE g_device;
 extern  DWORD g_CurSelectPid;
 extern  CString g_CurSelectImage;
 extern  BOOL	g_bFirsetRun;
+extern	UCHAR	g_index;
+extern	CString g_ObjectName;
 
 #ifndef _DRIVERNAME_
 #define _DRIVERNAME_

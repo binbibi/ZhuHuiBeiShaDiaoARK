@@ -146,6 +146,7 @@
     <ClInclude Include="Driver.h" />
     <ClInclude Include="GlobalFunc.h" />
     <ClInclude Include="MyDriver.h" />
+    <ClInclude Include="ObjectType.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="SSDT.h" />
   </ItemGroup>

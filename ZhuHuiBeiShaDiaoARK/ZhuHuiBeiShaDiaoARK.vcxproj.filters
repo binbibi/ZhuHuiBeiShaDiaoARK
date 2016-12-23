@@ -93,6 +93,12 @@
     <ClInclude Include="DlgDisPatch.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DlgObjectHook.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgObjectHandleLook.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ZhuHuiBeiShaDiaoARK.cpp">
@@ -159,6 +165,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DlgDisPatch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgObjectHook.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgObjectHandleLook.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

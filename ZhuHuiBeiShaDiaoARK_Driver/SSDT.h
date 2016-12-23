@@ -810,7 +810,7 @@ ULONG64 get_ssdt_func_addr(ULONG index)
 
 ULONG64 GetSSSDTFuncCurAddr64(ULONG64 index)
 {
-	ULONGLONG				W32pServiceTable = 0, FunctionCount = 0, i = 0, Index = 0;
+	ULONGLONG				W32pServiceTable = 0, FunctionCount = 0,Index = 0;
 	ULONGLONG				qwTemp = 0;
 	LONG					dwTemp;
 	PSYSTEM_SERVICE_TABLE	pWin32k;
@@ -822,13 +822,13 @@ ULONG64 GetSSSDTFuncCurAddr64(ULONG64 index)
 	
 	
 	Index = 0x1000 + index;
-		qwTemp = W32pServiceTable + 4 * (Index - 0x1000);	//DbgPrint("qwTemp: %llx",qwTemp);
-		dwTemp = *(PLONG)qwTemp;
-		dwTemp = dwTemp >> 4;
-		qwTemp = W32pServiceTable + (LONG64)dwTemp;
-		/*DbgPrint(
-			"id:%d\r\n"
-			"Address: %llx\r\n", index, qwTemp);*/
+	qwTemp = W32pServiceTable + 4 * (Index - 0x1000);	//DbgPrint("qwTemp: %llx",qwTemp);
+	dwTemp = *(PLONG)qwTemp;
+	dwTemp = dwTemp >> 4;
+	qwTemp = W32pServiceTable + (LONG64)dwTemp;
+	/*DbgPrint(
+		"id:%d\r\n"
+		"Address: %llx\r\n", index, qwTemp);*/
 
 		return qwTemp;
 	

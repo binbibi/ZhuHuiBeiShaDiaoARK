@@ -9,34 +9,38 @@
 
 #define SystemModuleInformationClass	11
 
+#ifndef _LDR_
+#define _LDR_
 typedef struct _LDR_DATA_TABLE_ENTRY
 {
-        LIST_ENTRY        InLoadOrderLinks;
-        LIST_ENTRY        InMemoryOrderLinks;
-        LIST_ENTRY        InInitializationOrderLinks;
-        PVOID                        DllBase;
-        PVOID                        EntryPoint;
-        ULONG                        SizeOfImage;
-        UNICODE_STRING        FullDllName;
-        UNICODE_STRING         BaseDllName;
-        //...剩下的成员省略
+	LIST_ENTRY        InLoadOrderLinks;
+	LIST_ENTRY        InMemoryOrderLinks;
+	LIST_ENTRY        InInitializationOrderLinks;
+	PVOID                        DllBase;
+	PVOID                        EntryPoint;
+	ULONG                        SizeOfImage;
+	UNICODE_STRING        FullDllName;
+	UNICODE_STRING         BaseDllName;
+	//...剩下的成员省略
 } LDR_DATA_TABLE_ENTRY, *PLDR_DATA_TABLE_ENTRY;
 //
 typedef struct _LDR_DATA_TABLE_ENTRY32
 {
-        LIST_ENTRY32                InLoadOrderLinks;
-        LIST_ENTRY32                InMemoryOrderLinks;
-        LIST_ENTRY32                InInitializationOrderLinks;
-        ULONG                                DllBase;
-        ULONG                                EntryPoint;
-        ULONG                                SizeOfImage;
-        UNICODE_STRING32        FullDllName;
-        UNICODE_STRING32         BaseDllName;
-        ULONG                                Flags;
-        USHORT                                LoadCount;
-        USHORT                                TlsIndex;
-        //下面的省略
+	LIST_ENTRY32                InLoadOrderLinks;
+	LIST_ENTRY32                InMemoryOrderLinks;
+	LIST_ENTRY32                InInitializationOrderLinks;
+	ULONG                                DllBase;
+	ULONG                                EntryPoint;
+	ULONG                                SizeOfImage;
+	UNICODE_STRING32        FullDllName;
+	UNICODE_STRING32         BaseDllName;
+	ULONG                                Flags;
+	USHORT                                LoadCount;
+	USHORT                                TlsIndex;
+	//下面的省略
 } LDR_DATA_TABLE_ENTRY32, *PLDR_DATA_TABLE_ENTRY32;
+#endif // !_LDR_
+
 
 typedef struct _HANDLE_INFO{
 	ULONG_PTR	ObjectTypeIndex;
@@ -171,6 +175,45 @@ typedef struct _SYSTEM_MODULE_INFORMATIONEX
 	ULONG Count;//内核中以加载的模块的个数 
 	SYSTEM_MODULE Module[0];
 } SYSTEM_MODULE_INFORMATIONEX, *PSYSTEM_MODULE_INFORMATIONEX;
+
+CHAR	*CallbacksType[8] =
+{
+	"LoadImage",//0
+	"CreateProcess",//1
+	"CreateThread",//2
+	"CmpRegister",//3
+	"ShutDowdn",//4
+	"BugCheck",//5
+	"BugCheckReason"//6
+};
+	
+
+/*
+回调信息
+CallbackType: 见CallbacksType索引
+回调入口
+回调所在镜像路径
+*/
+typedef struct _NOTIFY_INFO
+{
+	ULONG	Count; // 0号索引存放个数
+	ULONG	CallbackType;
+	ULONG64	CallbacksAddr;
+	ULONG64	Cookie; // just work to cmpcallback
+	CHAR	ImgPath[MAX_PATH];
+}NOTIFY_INFO, *PNOTIFY_INFO;
+
+// Ob 回调信息
+typedef struct _OBCALLBACKS_INFO
+{
+	ULONG	Count; // 0号索引存放个数
+	ULONG	ObType;// 0 进程 1 线程
+	ULONG64	PreCallbackAddr;
+	ULONG64	PostCallbackAddr; 
+	ULONG64	ObHandle;
+	CHAR	PreImgPath[MAX_PATH];
+	CHAR	PostImgPaht[MAX_PATH];
+}OBCALLBACKS_INFO, *POBCALLBACKS_INFO;
 
 NTKERNELAPI NTSTATUS PsLookupProcessByProcessId(IN HANDLE ProcessId,OUT PEPROCESS *Process);
 NTKERNELAPI NTSTATUS PsLookupThreadByThreadId(IN HANDLE ThreadId,OUT PETHREAD *Thread);

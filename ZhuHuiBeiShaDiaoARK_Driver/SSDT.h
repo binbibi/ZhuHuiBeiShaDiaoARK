@@ -2,6 +2,12 @@
 
 #include <ntddk.h>
 #include <intrin.h>
+
+#ifndef _NTIAMGE_
+#define _NTIAMGE_
+#include <ntimage.h>
+#endif // !_NTIAMGE_
+
 #include <ntimage.h>
 #include "GlobalFunc.h"
 
@@ -385,6 +391,7 @@ PULONG MyPeLoad(IN char* cStr, IN WCHAR *wcSrt)
 	UNICODE_STRING       path_name;       
 	ANSI_STRING  ansi_path;
 	ULONG flag = 0;//标志
+	ULONG Characteristics = 0;
 
 	IMAGE_DOS_HEADER	image_dos_header;//dos头结构
 	LARGE_INTEGER       large_integer;//记录偏移
@@ -553,6 +560,14 @@ PULONG MyPeLoad(IN char* cStr, IN WCHAR *wcSrt)
 	{   //磁盘占用的大小选择最大的
 		sizeof_raw_data = _max(p_image_section_header[i].Misc.VirtualSize, p_image_section_header[i].SizeOfRawData);
 		large_integer.QuadPart = p_image_section_header[i].PointerToRawData;   //各个磁盘的偏移地址
+
+		// 代码段 可执行 可读
+		Characteristics = p_image_section_header[i].Characteristics;
+		if ((Characteristics & 0x60000020) == 0x60000020)
+		{
+			// 这里用于保存要扫描钩子的节
+			DbgPrint("[CodeSection]%s\n", p_image_section_header[i].Name);
+		}
 		//读
 		status = ZwReadFile(hfile,       //ZwCreateFile成功后得到的句柄  
 			NULL,                        //一个事件  NULL

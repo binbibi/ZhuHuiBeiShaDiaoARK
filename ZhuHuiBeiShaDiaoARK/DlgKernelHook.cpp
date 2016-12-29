@@ -43,6 +43,12 @@ BOOL CDlgKernelHook::OnInitDialog()
 	m_Sheet_KernelHook.AddPage(&m_DlgSSDT);
 	m_Sheet_KernelHook.AddPage(&m_DlgSSSDT);
 	m_Sheet_KernelHook.AddPage(&m_DlgObjectHook);
+	m_Sheet_KernelHook.AddPage(&m_DlgSystemCall);
+	m_Sheet_KernelHook.AddPage(&m_DlgObCallbacks);
+	m_Sheet_KernelHook.AddPage(&m_DlgWorkItem);
+	m_Sheet_KernelHook.AddPage(&m_DlgMinifilter);
+	m_Sheet_KernelHook.AddPage(&m_DlgDpcTimer);
+	m_Sheet_KernelHook.AddPage(&m_DlgIoTimer);
 	
 	m_Sheet_KernelHook.Create(this, WS_CHILD | WS_VISIBLE, WS_EX_CONTROLPARENT);
 	m_Sheet_KernelHook.SetWindowPos(NULL,-6, -6, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);

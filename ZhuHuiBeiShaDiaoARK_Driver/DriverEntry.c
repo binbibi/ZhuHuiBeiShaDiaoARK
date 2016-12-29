@@ -8,6 +8,17 @@
 #include "SSDT.h"
 #include "Driver.h"
 #include "ObjectType.h"
+#include "KernelHookCheck.h"
+#include "ImgNotify.h"
+#include "ProcNotify.h"
+#include "RegCallback.h"
+#include "ShutDownBugCheck.h"
+#include "ThrdNotify.h"
+#include "ObCallBacks.h"
+#include "WorkItem.h"
+#include "EnumMinifilter.h"
+#include "DpcTimer.h"
+#include "IoTimer.h"
 
 extern	PHANDLE_INFO pHandleInfo;
 
@@ -487,8 +498,280 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 
 			break;
 		}
+		case IOCTL_ENUMCALLBACKS:
+		{
+			if (uOutSize < sizeof(NOTIFY_INFO) * 100)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			if (uInSize > 4)
+			{
+				status = STATUS_BUFFER_OVERFLOW;
+				break;
+			}
+
+			/*
+			
+			"LoadImage",//0
+			"CreateProcess",//1
+			"CreateThread",//2
+			"CmpRegister",//3
+			"ShutDowdn",//4
+			// EnumType:5	回调类型不变
+			"BugCheck",//5
+			"BugCheckReason"//6
+			*/
+			
+
+			ULONG EnumType = 0;
+			EnumType = *(ULONG*)pIoBuffer;
+
+			PNOTIFY_INFO pNotify = NULL;
+
+			switch (EnumType)
+			{
+				case 0:
+					pNotify = EnumLoadImageNotify();
+					break;
+				case 1:
+					pNotify = EnumCreateProcessNotify();
+					break;
+				case 2:
+					pNotify = EnumCreateThreadNotify();
+					break;
+				case 3:
+					pNotify = EnumCmCallback64();
+					break;
+				case 4:
+					pNotify = EnumShutdownCallback();
+					break;
+				case 5:
+					pNotify = EnumBugcheckCallback();
+					break;
+
+				default:
+					status = STATUS_INVALID_ADDRESS;
+					goto Exit;
+					break;
+			}
+
+			if (pNotify == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pNotify,
+					uOutSize
+				);
+
+				status = STATUS_SUCCESS;
+
+				if(pNotify)
+					ExFreePool(pNotify);
+				pNotify = NULL;
+				break;
+
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+			}
+
+			break;
+		}
+		case IOCTL_ENUMOBCALLBACKS:
+		{
+			if (uOutSize < sizeof(OBCALLBACKS_INFO) * 100)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			POBCALLBACKS_INFO pObCallbackInfo = NULL;
+			pObCallbackInfo = EnumObCallbacks();
+			if (pObCallbackInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pObCallbackInfo,
+					sizeof(OBCALLBACKS_INFO) * 100
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(pObCallbackInfo);
+				pObCallbackInfo = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+			}
+			break;
+		}
+		case IOCTL_ENUMWORKITEMTHREAD:
+		{
+			if (uOutSize < sizeof(WORK_THREAD_INFO) * 300)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			PWORK_THREAD_INFO pWorkInfo = NULL;
+			pWorkInfo = EnumWorkThread();
+
+			if (pWorkInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pWorkInfo,
+					sizeof(WORK_THREAD_INFO) * 300
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(pWorkInfo);
+				pWorkInfo = NULL;
+				break;
+			}
+			__except(1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+			}
+			break;
+		}
+		case IOCTL_ENUMMINIFLTER:
+		{
+			if (uOutSize < sizeof(MINIFILTER_INFO) * 1000)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			PMINIFILTER_INFO pFltInfo = NULL;
+			pFltInfo = EnumMiniFilter();
+
+			if (pFltInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pFltInfo,
+					sizeof(MINIFILTER_INFO) * 1000
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(pFltInfo);
+				pFltInfo = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				if (pFltInfo)
+					ExFreePool(pFltInfo);
+			}
+
+			break;
+		}
+		case IOCTL_ENUMMDPCTIMER:
+		{
+			if (uOutSize < sizeof(DPC_TIMER) * 500)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			PDPC_TIMER pDpcInfo = NULL;
+			pDpcInfo = EnumDpcTimer();
+
+			if (pDpcInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pDpcInfo,
+					sizeof(DPC_TIMER) * 500
+				);
+				
+				status = STATUS_SUCCESS;
+				ExFreePool(pDpcInfo);
+				pDpcInfo = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				if (pDpcInfo)
+					ExFreePool(pDpcInfo);
+			}
+			break;
+		}
+		case IOCTL_ENUMIOTMER:
+		{
+			if (uOutSize < sizeof(IO_TIMER_INFO) * 100)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			PIO_TIMER_INFO pIoTimerInfo = NULL;
+
+			pIoTimerInfo = EnumIoTimer();
+			if (pIoTimerInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pIoTimerInfo,
+					sizeof(IO_TIMER_INFO) * 100
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(pIoTimerInfo);
+				pIoTimerInfo = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				if (pIoTimerInfo)
+					ExFreePool(pIoTimerInfo);
+			}
+
+			break;
+		}
 		break;
 	}
+
+Exit:
 	if(status == STATUS_SUCCESS)
 		pIrp->IoStatus.Information = uOutSize;
 	else
@@ -510,8 +793,16 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 	UNICODE_STRING ustrLinkName;
 	UNICODE_STRING ustrDevName;
 	PDEVICE_OBJECT pDevObj;
+	//WCHAR	*pModulePath = NULL;
+	//DWORD64 dwKernelModueBase = 0;
+	//DWORD64 dwKernelSize = 0;
+	//UCHAR	*NewModuleBase = NULL;
 
 	UNREFERENCED_PARAMETER(pRegistryString);
+
+	if (!GetVersionAndHardCode())
+		return STATUS_NOT_SUPPORTED;
+
 	g_DriverObject = pDriverObj;
 	if (!get_ssdt_info_init())
 	{
@@ -529,7 +820,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 		DbgPrint("GetGuiProcess faild !\n");
 		return STATUS_UNSUCCESSFUL;
 	}
-
+	
 	//
 	pDriverObj->MajorFunction[IRP_MJ_CREATE] = DispatchCreate;
 	pDriverObj->MajorFunction[IRP_MJ_CLOSE] = DispatchClose;
@@ -553,8 +844,34 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 		IoDeleteDevice(pDevObj); 
 		return status;
 	}
-	KdPrint(("[ZhuHuiBeiShaDiAO]:DriverEntry"));
-	//EnumProcessHandleWin78((HANDLE)448);
-	//EnumDriverMajorFunction(L"ntfs");
+
+	KdPrint(("[ZhuHuiBeiShaDiAO]:DriverEntry\n"));
+
+	if (!GetSystemKernelModuleInfo(pDriverObj, &SystemKernelFilePath, &SystemKernelModuleBase, &SystemKernelModuleSize, TRUE, NULL))
+	{
+		DbgPrint("GetSystemKernelModuleInfo faild !\n");
+		goto Exit;
+	}
+
+	/*if (!GetSystemKernelModuleInfo(pDriverObj, &pModulePath, &dwKernelModueBase, &dwKernelSize, FALSE, L"win32k.sys"))
+	{
+		DbgPrint("GetKernelModuleInfo faild !\n");
+		goto Exit;
+	}
+
+	if (PeLoad(pModulePath, &NewModuleBase, pDriverObj, dwKernelModueBase, FALSE))
+	{
+		DbgPrint("win32k load success !\n");
+		DbgPrint("NewModuelBase:0x%p ---- OldBase:0x%p\n", NewModuleBase, dwKernelModueBase);
+	}*/
+
+	/*if (PeLoad(SystemKernelFilePath, &ImageModuleBase, pDriverObj, SystemKernelModuleBase, TRUE))
+		GetEprocessFromPid(4);*/
+Exit:
+	
+	// xxxxxxxxxxx
+	//ExFreePool(NewModuleBase);
+
+	
 	return STATUS_SUCCESS;
 }

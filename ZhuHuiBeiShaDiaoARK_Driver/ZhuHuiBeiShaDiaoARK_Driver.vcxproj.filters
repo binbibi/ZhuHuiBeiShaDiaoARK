@@ -42,5 +42,41 @@
     <ClInclude Include="ObjectType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="KernelHookCheck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ReloadKernel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImgNotify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcNotify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RegCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShutDownBugCheck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ThrdNotify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ObCallBacks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WorkItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EnumMinifilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IoTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DpcTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

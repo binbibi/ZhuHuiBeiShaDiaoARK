@@ -99,6 +99,24 @@
     <ClInclude Include="DlgObjectHandleLook.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DlgSystemCall.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgObCallbacks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgWorkItemThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgMinifilter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgDpcTimer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgIOTimer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ZhuHuiBeiShaDiaoARK.cpp">
@@ -171,6 +189,24 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DlgObjectHandleLook.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgSystemCall.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgObCallbacks.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgWorkItemThread.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgMinifilter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgDpcTimer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgIOTimer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

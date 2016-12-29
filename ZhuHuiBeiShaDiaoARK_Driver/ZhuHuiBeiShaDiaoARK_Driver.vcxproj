@@ -134,6 +134,9 @@
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>fltmgr.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
@@ -143,12 +146,24 @@
     <ClCompile Include="DriverEntry.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DpcTimer.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="EnumMinifilter.h" />
     <ClInclude Include="GlobalFunc.h" />
+    <ClInclude Include="ImgNotify.h" />
+    <ClInclude Include="IoTimer.h" />
+    <ClInclude Include="KernelHookCheck.h" />
     <ClInclude Include="MyDriver.h" />
+    <ClInclude Include="ObCallBacks.h" />
     <ClInclude Include="ObjectType.h" />
     <ClInclude Include="Process.h" />
+    <ClInclude Include="ProcNotify.h" />
+    <ClInclude Include="RegCallback.h" />
+    <ClInclude Include="ReloadKernel.h" />
+    <ClInclude Include="ShutDownBugCheck.h" />
     <ClInclude Include="SSDT.h" />
+    <ClInclude Include="ThrdNotify.h" />
+    <ClInclude Include="WorkItem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

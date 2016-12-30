@@ -266,7 +266,7 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 					status = STATUS_BUFFER_TOO_SMALL;
 					break;
 				}
-				EnumDriver(g_DriverObject);
+				EnumDriver(g_DriverObject, FALSE, NULL);
 				KdPrint(("IOCTL:%d\n",pDriverInfo[0].Count));
 				__try{
 					RtlCopyMemory(
@@ -768,6 +768,44 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 
 			break;
 		}
+		case IOCTL_ENUMFILTERDRIVER:
+		{
+			if (uOutSize < sizeof(FILTER_DRIVER_INFO) * 500)
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+				break;
+			}
+
+			PFILTER_DRIVER_INFO pFltDrvInfo = NULL;
+			pFltDrvInfo = EnumFilterDriver();
+
+			if (pFltDrvInfo == NULL)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				break;
+			}
+
+			__try {
+				RtlCopyMemory(
+					pIrp->AssociatedIrp.SystemBuffer,
+					pFltDrvInfo,
+					sizeof(FILTER_DRIVER_INFO) * 500
+				);
+
+				status = STATUS_SUCCESS;
+				ExFreePool(pFltDrvInfo);
+				pFltDrvInfo = NULL;
+				break;
+			}
+			__except (1)
+			{
+				status = STATUS_UNSUCCESSFUL;
+				if (pFltDrvInfo)
+					ExFreePool(pFltDrvInfo);
+			}
+
+			break;
+		}
 		break;
 	}
 
@@ -793,6 +831,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 	UNICODE_STRING ustrLinkName;
 	UNICODE_STRING ustrDevName;
 	PDEVICE_OBJECT pDevObj;
+
 	//WCHAR	*pModulePath = NULL;
 	//DWORD64 dwKernelModueBase = 0;
 	//DWORD64 dwKernelSize = 0;
@@ -871,7 +910,6 @@ Exit:
 	
 	// xxxxxxxxxxx
 	//ExFreePool(NewModuleBase);
-
 	
 	return STATUS_SUCCESS;
 }

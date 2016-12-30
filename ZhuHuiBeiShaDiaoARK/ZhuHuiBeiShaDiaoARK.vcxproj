@@ -192,6 +192,7 @@
     <ClInclude Include="DlgDpcTimer.h" />
     <ClInclude Include="DlgDrvier.h" />
     <ClInclude Include="DlgFile.h" />
+    <ClInclude Include="DlgFilterDriver.h" />
     <ClInclude Include="DlgFunction.h" />
     <ClInclude Include="DlgHandleLook.h" />
     <ClInclude Include="DlgIOTimer.h" />
@@ -227,6 +228,7 @@
     <ClCompile Include="DlgDpcTimer.cpp" />
     <ClCompile Include="DlgDrvier.cpp" />
     <ClCompile Include="DlgFile.cpp" />
+    <ClCompile Include="DlgFilterDriver.cpp" />
     <ClCompile Include="DlgFunction.cpp" />
     <ClCompile Include="DlgHandleLook.cpp" />
     <ClCompile Include="DlgIOTimer.cpp" />

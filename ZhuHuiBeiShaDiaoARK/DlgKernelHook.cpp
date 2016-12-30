@@ -49,6 +49,7 @@ BOOL CDlgKernelHook::OnInitDialog()
 	m_Sheet_KernelHook.AddPage(&m_DlgMinifilter);
 	m_Sheet_KernelHook.AddPage(&m_DlgDpcTimer);
 	m_Sheet_KernelHook.AddPage(&m_DlgIoTimer);
+	m_Sheet_KernelHook.AddPage(&m_DlgFilterDrv);
 	
 	m_Sheet_KernelHook.Create(this, WS_CHILD | WS_VISIBLE, WS_EX_CONTROLPARENT);
 	m_Sheet_KernelHook.SetWindowPos(NULL,-6, -6, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);

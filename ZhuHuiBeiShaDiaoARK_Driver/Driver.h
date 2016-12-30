@@ -18,6 +18,7 @@ ObReferenceObjectByName(
 
 extern POBJECT_TYPE *IoDriverObjectType;
 
+extern PDRIVER_OBJECT g_DriverObject;
 
 // 驱动模块地址信息
 typedef struct _DRIVER_INFO
@@ -49,6 +50,12 @@ typedef struct _DRIVER_INFO
 // 保存驱动信息
 PDRIVER_INFO pDriverInfo = NULL;
 
+typedef struct _DEVICE_DRIVER_INFO
+{
+	ULONG Count;
+	PDRIVER_OBJECT pDrvObj;// 有设备对象的驱动对象
+	WCHAR szObjName[MAX_PATH * 2]; // 对象名 给ObReferenceObjectByNam调用时用到
+}DEVICE_DRIVER_INFO, *PDEVICE_DRIVER_INFO;
 
 typedef struct  _IRP_DISPATCH_INFO
 {
@@ -60,7 +67,19 @@ typedef struct  _IRP_DISPATCH_INFO
 
 PIRP_DISPATCH_INFO pIrpDispatchInfo = NULL;
 
+
+typedef struct _FILTER_DRIVER_INFO
+{
+	ULONG	Count;
+	ULONG	DeviceType;
+	ULONG64	AttachedDevice;
+	WCHAR	SysName[MAX_PATH];
+	WCHAR	HostSysName[MAX_PATH];
+	WCHAR	HostSysPath[MAX_PATH];
+}FILTER_DRIVER_INFO, *PFILTER_DRIVER_INFO;
+
 NTSTATUS GetDriverObject(IN WCHAR *DriverName, OUT PDRIVER_OBJECT *lpDriverObject);
+BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEVICE_DRIVER_INFO *lpDeviceDriverBuff);
 
 typedef struct _KLDR_DATA_TABLE_ENTRY
 {
@@ -142,6 +161,175 @@ NTSTATUS GetDriverObject(IN WCHAR *DriverName, OUT PDRIVER_OBJECT *lpDriverObjec
 	ObDereferenceObject(pDriverObject);
 
 	return STATUS_SUCCESS;
+}
+
+
+PFILTER_DRIVER_INFO EnumFilterDriver()
+{
+	/*
+	1.枚举驱动 得到有设备对象的驱动
+	2.检查设备对象中AttachDevice是否有值
+	3.如果存在 循环 直到NextDevice为NULL
+	*/
+	ULONG			Count = 0;
+	ULONG			uAttchNum = 0;
+	PDEVICE_OBJECT CurrentDevice = NULL;
+	PDEVICE_OBJECT pAttachedDevice = NULL;
+	PDEVICE_OBJECT	LastDevice = NULL;
+	PDRIVER_OBJECT pDrvObj = NULL;
+	PDEVICE_DRIVER_INFO pInfo = NULL;
+	PLDR_DATA_TABLE_ENTRY pLdr = NULL;
+	PFILTER_DRIVER_INFO pFilterInfo = NULL;
+
+	if (!EnumDriver(g_DriverObject, TRUE, &pInfo))
+		return NULL;
+
+	pFilterInfo = ExAllocatePool(NonPagedPool, sizeof(FILTER_DRIVER_INFO) * 500);
+
+	if (pFilterInfo == NULL)
+	{
+		ExFreePool(pInfo);
+		return NULL;
+	}
+
+	RtlZeroMemory(pFilterInfo, sizeof(FILTER_DRIVER_INFO) * 500);
+
+	Count = pInfo[0].Count;
+
+	for (size_t i = 0; i < Count; i++)
+	{
+		pDrvObj = (PDRIVER_OBJECT)pInfo[i].pDrvObj;
+		CurrentDevice = pDrvObj->DeviceObject;
+		if (CurrentDevice == NULL || CurrentDevice->AttachedDevice == NULL )
+			continue;
+		// Ldr = (PLDR_DATA_TABLE_ENTRY)(AttachObject->DriverObject->DriverSection)
+		while (CurrentDevice != NULL)
+		{
+			if (MmIsAddressValid(CurrentDevice) &&
+				MmIsAddressValid(CurrentDevice->AttachedDevice))
+			{
+				pLdr = (PLDR_DATA_TABLE_ENTRY)CurrentDevice->AttachedDevice->DriverObject->DriverSection;
+				/*DbgPrint(
+					"ObjectType:%d\r\n"
+					"AttachedDevice:0x%p\r\n"
+					"SysName:%wZ\r\n"
+					"HostSysName:%wZ\r\n"
+					"SysPath:%wZ\r\n:"
+					, CurrentDevice->AttachedDevice->DeviceType
+					, CurrentDevice->AttachedDevice
+					, &CurrentDevice->AttachedDevice->DriverObject->DriverName
+					, &pDrvObj->DriverName
+					, &pLdr->FullDllName
+				);*/
+				
+				pFilterInfo[uAttchNum].DeviceType = CurrentDevice->AttachedDevice->DeviceType;
+				pFilterInfo[uAttchNum].AttachedDevice = CurrentDevice->AttachedDevice;
+
+				RtlZeroMemory(pFilterInfo[uAttchNum].SysName, MAX_PATH * 2);
+				RtlCopyMemory(pFilterInfo[uAttchNum].SysName, CurrentDevice->AttachedDevice->DriverObject->DriverName.Buffer, CurrentDevice->AttachedDevice->DriverObject->DriverName.Length );
+
+				RtlZeroMemory(pFilterInfo[uAttchNum].HostSysName, MAX_PATH * 2);
+				RtlCopyMemory(pFilterInfo[uAttchNum].HostSysName, pDrvObj->DriverName.Buffer, pDrvObj->DriverName.Length);
+
+				if (pLdr->FullDllName.Buffer != NULL)
+				{
+					RtlZeroMemory(pFilterInfo[uAttchNum].HostSysPath, MAX_PATH * 2);
+					RtlCopyMemory(pFilterInfo[uAttchNum].HostSysPath, pLdr->FullDllName.Buffer, pLdr->FullDllName.Length * 2);
+				}
+
+				uAttchNum++;
+
+				// 指向上一个附加设备
+				if (MmIsAddressValid(CurrentDevice->AttachedDevice->AttachedDevice))
+				{
+					pAttachedDevice = CurrentDevice->AttachedDevice->AttachedDevice;
+					LastDevice = CurrentDevice->AttachedDevice;
+					while (pAttachedDevice)
+					{
+						pLdr = (PLDR_DATA_TABLE_ENTRY)pAttachedDevice->DriverObject->DriverSection;
+						pFilterInfo[uAttchNum].AttachedDevice = pAttachedDevice;
+
+						pFilterInfo[uAttchNum].DeviceType = pAttachedDevice->DeviceType;
+
+						RtlZeroMemory(pFilterInfo[uAttchNum].SysName, MAX_PATH * 2);
+						RtlCopyMemory(pFilterInfo[uAttchNum].SysName, pAttachedDevice->DriverObject->DriverName.Buffer, pAttachedDevice->DriverObject->DriverName.Length);
+
+						RtlZeroMemory(pFilterInfo[uAttchNum].HostSysName, MAX_PATH * 2);
+						RtlCopyMemory(pFilterInfo[uAttchNum].HostSysName, LastDevice->DriverObject->DriverName.Buffer, LastDevice->DriverObject->DriverName.Length);
+
+						if (pLdr->FullDllName.Buffer != NULL)
+						{
+							RtlZeroMemory(pFilterInfo[uAttchNum].HostSysPath, MAX_PATH * 2);
+							RtlCopyMemory(pFilterInfo[uAttchNum].HostSysPath, pLdr->FullDllName.Buffer, pLdr->FullDllName.Length * 2);
+						}
+
+						uAttchNum++;
+
+						if (MmIsAddressValid(pAttachedDevice->AttachedDevice))
+						{
+							LastDevice = pAttachedDevice;
+							pAttachedDevice = pAttachedDevice->AttachedDevice;	
+						}
+						else
+						{
+							break;
+						}
+					}
+
+				}
+			}
+			else
+			{
+				break;
+			}
+			CurrentDevice = CurrentDevice->NextDevice;
+		}
+	}
+
+	DbgPrint("nCount:%d\r\n", uAttchNum);
+
+	pFilterInfo[0].Count = uAttchNum;
+	ExFreePool(pInfo);
+	return pFilterInfo;
+}
+
+VOID DisableAllFilters(PWSTR lpwName, SIZE_T *OriFsFlt, ULONG MaxCount, ULONG Action)
+{
+	ULONG i = 0;
+	UNICODE_STRING TName;
+	PDRIVER_OBJECT TDrvObj;
+	PDEVICE_OBJECT CurrentDevice;
+	NTSTATUS status;
+	RtlInitUnicodeString(&TName, lpwName);
+	status = ObReferenceObjectByName(&TName,
+		OBJ_CASE_INSENSITIVE,
+		NULL,
+		0,
+		*IoDriverObjectType,
+		KernelMode,
+		NULL,
+		&TDrvObj);
+
+	if (!NT_SUCCESS(status)) return;
+	if (!TDrvObj) return;
+	CurrentDevice = TDrvObj->DeviceObject;
+	while (CurrentDevice != NULL)
+	{
+		if (!Action)	//bypass
+		{
+			OriFsFlt[i] = (SIZE_T)InterlockedExchangePointer((PVOID*)&CurrentDevice->AttachedDevice, NULL);
+		}
+		else
+		{
+			OriFsFlt[i] = (SIZE_T)InterlockedExchangePointer((PVOID*)&CurrentDevice->AttachedDevice, (PDEVICE_OBJECT)(OriFsFlt[i]));
+		}
+		CurrentDevice = CurrentDevice->NextDevice;
+		i++;
+		if (i >= MaxCount)
+			break;
+	}
+	ObDereferenceObject(TDrvObj);
+	return;
 }
 
 NTSTATUS EnumDriverMajorFunction(WCHAR *DriverName)
@@ -241,18 +429,31 @@ NTSTATUS EnumDriverMajorFunction(WCHAR *DriverName)
 	return STATUS_SUCCESS;
 }
 
-BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject)
+
+BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEVICE_DRIVER_INFO *lpDeviceDriverBuff)
 {
 	ULONG count = 0;
-	//ULONG t = 0;
+	ULONG uDeviceDriverNum = 0;
 	PKLDR_DATA_TABLE_ENTRY entry = (PKLDR_DATA_TABLE_ENTRY)pDriverObject->DriverSection;
 	PKLDR_DATA_TABLE_ENTRY firstentry = (PKLDR_DATA_TABLE_ENTRY)entry->InLoadOrderLinks.Blink;
 	WCHAR *szDriver = (WCHAR*)ExAllocatePool(NonPagedPool, MAX_PATH * 2);
 	PDRIVER_OBJECT pOutDriverObject = NULL;
+	PDEVICE_DRIVER_INFO pDeviceDriverInfo = NULL;
+	WCHAR szPnpManager[MAX_PATH] = L"PnpManager";
 	pDriverInfo = (PDRIVER_INFO)ExAllocatePool(NonPagedPool, sizeof(DRIVER_INFO)*500);
-
+	
 	if(pDriverInfo == NULL)
 		return FALSE;
+
+	// 枚举过滤驱动用
+	if (bEnumDeviceDriver)
+	{
+		pDeviceDriverInfo = ExAllocatePool(NonPagedPool, sizeof(DEVICE_DRIVER_INFO) * 500);
+		if (pDeviceDriverInfo == NULL)
+			goto Exit;
+
+		RtlZeroMemory(pDeviceDriverInfo, sizeof(DEVICE_DRIVER_INFO) * 500);
+	}
 
 	RtlZeroMemory(pDriverInfo, sizeof(DRIVER_INFO)*500);
 
@@ -289,6 +490,15 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject)
 
 		pDriverInfo[0].DriverObject = (ULONG_PTR)pOutDriverObject;
 		pDriverInfo[0].DeviceObject = (ULONG_PTR)pOutDriverObject->DeviceObject;
+
+		if (bEnumDeviceDriver && pOutDriverObject->DeviceObject)
+		{
+			pDeviceDriverInfo[uDeviceDriverNum].pDrvObj = (ULONG_PTR)pOutDriverObject;
+
+			RtlCopyMemory(pDeviceDriverInfo[uDeviceDriverNum].szObjName, firstentry->BaseDllName.Buffer, firstentry->BaseDllName.Length - 8);
+			uDeviceDriverNum++;
+		}
+		
 	}
 	
 	count++;
@@ -331,6 +541,15 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject)
 
 				pDriverInfo[count].DriverObject = (ULONG_PTR)pOutDriverObject;
 				pDriverInfo[count].DeviceObject = (ULONG_PTR)pOutDriverObject->DeviceObject;
+
+				if (bEnumDeviceDriver && pOutDriverObject->DeviceObject)
+				{
+					pDeviceDriverInfo[uDeviceDriverNum].pDrvObj = (ULONG_PTR)pOutDriverObject;
+
+					RtlCopyMemory(pDeviceDriverInfo[uDeviceDriverNum].szObjName, entry->BaseDllName.Buffer, entry->BaseDllName.Length - 8);
+					uDeviceDriverNum++;
+				}
+
 			}
 			//EnumDriverMajorFunction(szDriver);
 			pOutDriverObject = NULL;
@@ -340,11 +559,30 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject)
 	}
 
 	pDriverInfo[0].Count = count;
+	if (bEnumDeviceDriver)
+	{
+		PDRIVER_OBJECT pDrv = NULL;
+		if (NT_SUCCESS(GetDriverObject(szPnpManager, &pDrv)))
+		{
+			pDeviceDriverInfo[uDeviceDriverNum].pDrvObj = pDrv;
+			pDeviceDriverInfo[0].Count = uDeviceDriverNum + 1;
+		}
+		else
+		{
+			pDeviceDriverInfo[0].Count = uDeviceDriverNum;
+		}
+		
+	}
+		
 
+Exit:
 	if(count == 0)
 	{
-		ExFreePool(pDriverInfo);
+		if(pDriverInfo)
+			ExFreePool(pDriverInfo);
 		pDriverInfo = NULL;
+		if(szDriver)
+			ExFreePool(szDriver);
 		return FALSE;
 	}
 
@@ -376,6 +614,13 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject)
 
 	DbgPrint("共有模块:%d\n", pDriverInfo[0].Count);
 	ExFreePool(szDriver);
+	if (bEnumDeviceDriver)
+	{
+		DbgPrint("设备驱动:%d\n", pDeviceDriverInfo[0].Count);
+		ExFreePool(pDriverInfo);
+		*lpDeviceDriverBuff = pDeviceDriverInfo;
+	}
+
 	//ExFreePool(pDriverInfo);
 	return TRUE;
 }

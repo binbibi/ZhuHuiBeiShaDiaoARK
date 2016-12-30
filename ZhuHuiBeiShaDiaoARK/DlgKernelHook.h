@@ -9,6 +9,7 @@
 #include "DlgMinifilter.h"
 #include "DlgDpcTimer.h"
 #include "DlgIOTimer.h"
+#include "DlgFilterDriver.h"
 
 
 // CDlgKernelHook ¶Ô»°¿ò
@@ -39,6 +40,7 @@ public:
 	CDlgMinifilter		m_DlgMinifilter;
 	CDlgDpcTimer		m_DlgDpcTimer;
 	CDlgIOTimer			m_DlgIoTimer;
+	CDlgFilterDriver	m_DlgFilterDrv;
 	virtual BOOL OnInitDialog();
 	afx_msg void UloadDelFile();
 };

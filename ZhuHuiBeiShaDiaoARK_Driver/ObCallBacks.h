@@ -96,13 +96,12 @@ POBCALLBACKS_INFO EnumObCallbacks()
 
 
 	RtlZeroMemory(pNotify, sizeof(OBCALLBACKS_INFO) * 100);
-	//
-	//dprintf("ObProcessCallbackListHead: %p\n", ObProcessCallbackListHead);
-	CurrEntry = ((PLIST_ENTRY)ObProcessCallbackListHead)->Flink;	//list_head的数据是垃圾数据，忽略
+	
+	CurrEntry = ((PLIST_ENTRY)ObProcessCallbackListHead)->Flink;	
 	do
 	{
 		pObCallback = (POB_CALLBACK)CurrEntry;
-		if (pObCallback->ObHandle != 0)
+		if (pObCallback->ObHandle != 0) //list_head的数据是垃圾数据，忽略
 		{
 			//dprintf("ObHandle: %p\n", pObCallback->ObHandle);
 			//dprintf("PreCall: %p\n", pObCallback->PreCall);
@@ -130,8 +129,8 @@ POBCALLBACKS_INFO EnumObCallbacks()
 		}
 		CurrEntry = CurrEntry->Flink;
 	} while (CurrEntry != (PLIST_ENTRY)ObProcessCallbackListHead);
-	//
-	//dprintf("ObThreadCallbackListHead: %p\n", ObThreadCallbackListHead);
+	
+	// 线程
 	CurrEntry = ((PLIST_ENTRY)ObThreadCallbackListHead)->Flink;	//list_head的数据是垃圾数据，忽略
 	do
 	{

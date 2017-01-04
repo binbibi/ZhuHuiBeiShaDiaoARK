@@ -228,7 +228,14 @@ NTSTATUS GetProcessPathByPid(HANDLE pid ,WCHAR* szProcessName)
 
 	
 	//memcpy(szProcessName,szProcessPath->Buffer,szProcessPath->Length);
-	wcsncpy(szProcessName,szProcessPath->Buffer,szProcessPath->Length*2);
+	//wcsncpy(szProcessName,szProcessPath->Buffer,szProcessPath->Length*2);
+	__try {
+		RtlCopyMemory(szProcessName, szProcessPath->Buffer, szProcessPath->Length * 2);
+	}
+	__except (1)
+	{
+		DbgPrint("GetProcessPathByPid error !\n");
+	}
 	
 
 	ExFreePool(szProcessPath);

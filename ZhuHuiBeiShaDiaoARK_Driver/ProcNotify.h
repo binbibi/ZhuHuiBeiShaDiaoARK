@@ -10,7 +10,6 @@ ULONG64 FindPspCreateProcessNotifyRoutine()
 	//获得PspSetCreateProcessNotifyRoutine的地址
 	memcpy(&OffsetAddr,(PUCHAR)pCheckArea+4,4);
 	pCheckArea=(pCheckArea+3)+5+OffsetAddr;
-	//DbgPrint("PspSetCreateProcessNotifyRoutine: %llx\n",pCheckArea);
 	//获得PspCreateProcessNotifyRoutine的地址
 	for(i=pCheckArea;i<pCheckArea+0xff;i++)
 	{

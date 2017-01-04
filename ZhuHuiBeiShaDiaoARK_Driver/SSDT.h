@@ -163,7 +163,7 @@ int get_ssdt_info_init()
 //	return 0;
 //}
 
-ULONGLONG MyGetKeServiceDescriptorTable64() //我的方法
+ULONGLONG MyGetKeServiceDescriptorTable64() 
 {
 	PUCHAR StartSearchAddress = (PUCHAR)__readmsr(0xC0000082);
     PUCHAR EndSearchAddress = StartSearchAddress + 0x500;
@@ -829,7 +829,7 @@ ULONG64 GetSSSDTFuncCurAddr64(ULONG64 index)
 	ULONGLONG				qwTemp = 0;
 	LONG					dwTemp;
 	PSYSTEM_SERVICE_TABLE	pWin32k;
-	pWin32k = (PSYSTEM_SERVICE_TABLE)((ULONG64)KeServiceDescriptorTableShadow + 4 * 8);
+	pWin32k = (PSYSTEM_SERVICE_TABLE)((ULONG64)KeServiceDescriptorTableShadow + 4 * 8);// 跳过第一个服务表
 	W32pServiceTable = (ULONGLONG)(pWin32k->ServiceTableBase);
 	FunctionCount = pWin32k->NumberOfServices;
 	ul64W32pServiceTable = W32pServiceTable;

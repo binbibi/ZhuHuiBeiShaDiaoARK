@@ -239,7 +239,7 @@ PFILTER_DRIVER_INFO EnumFilterDriver()
 
 				uAttchNum++;
 
-				// 指向上一个附加设备
+				// 指向上一个附加设备(附加别人的设备的设备被别人附加了)
 				if (MmIsAddressValid(CurrentDevice->AttachedDevice->AttachedDevice))
 				{
 					pAttachedDevice = CurrentDevice->AttachedDevice->AttachedDevice;
@@ -511,7 +511,7 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEV
 	while ((PKLDR_DATA_TABLE_ENTRY)entry->InLoadOrderLinks.Flink != firstentry)
 	{
 		RtlZeroMemory(szDriver, MAX_PATH * 2);
-		if (entry->EntryPoint>0xFFFFF80000000000)
+		if (entry->EntryPoint>MmUserProbeAddress)
 		{
 			//DbgPrint("%p\t%p\t%wZ\t%wZ\t\n", entry->DllBase, entry->EntryPoint, entry->BaseDllName,entry->FullDllName);
 			pDriverInfo[count].Base = entry->DllBase;
@@ -523,11 +523,19 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEV
 				RtlCopyMemory(pDriverInfo[count].ImagePath, entry->FullDllName.Buffer, entry->FullDllName.Length);
 			}
 			__except(1){
-
+				goto Keep;
 			}
 
-			RtlCopyMemory(szDriver, entry->BaseDllName.Buffer, entry->BaseDllName.Length - 8);
-			GetDriverObject(szDriver, &pOutDriverObject);
+			// 第二个驱动是NULL 需要注意 否则蓝屏
+			__try {
+				RtlCopyMemory(szDriver, entry->BaseDllName.Buffer, entry->BaseDllName.Length - 8);
+				GetDriverObject(szDriver, &pOutDriverObject);
+			}
+			__except (1)
+			{
+				goto Keep;
+			}
+			
 			if(pOutDriverObject != NULL)
 			{
 				__try
@@ -537,6 +545,7 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEV
 				__except(1)
 				{
 					DbgPrint("222222\n");
+					goto Keep;
 				}
 
 				pDriverInfo[count].DriverObject = (ULONG_PTR)pOutDriverObject;
@@ -555,6 +564,7 @@ BOOLEAN EnumDriver(PDRIVER_OBJECT pDriverObject, BOOLEAN bEnumDeviceDriver, PDEV
 			pOutDriverObject = NULL;
 			count++;
 		}
+		Keep:
 		entry = (PKLDR_DATA_TABLE_ENTRY)entry->InLoadOrderLinks.Flink;
 	}
 

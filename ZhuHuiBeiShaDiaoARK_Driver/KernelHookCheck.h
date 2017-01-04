@@ -1074,6 +1074,7 @@ int FixImportTable(unsigned char *ImageBase, DWORD64 ExistImageBase, PDRIVER_OBJ
 	}
 	return TRUE;
 }
+
 UINT64 AlignSize(UINT64 nSize, UINT64 nAlign)
 {
 	return ((nSize + nAlign - 1) / nAlign * nAlign);

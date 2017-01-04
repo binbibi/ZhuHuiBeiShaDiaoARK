@@ -71,7 +71,6 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	//ULONGLONG ssdt_func_addr = 0;
 	wchar_t *outbuff = (wchar_t*)ExAllocatePool(NonPagedPool,260*2);//传出W字符
 	SSDT_INFO ssdt_addr_info = { 0 };
-	PSSSDT_INFO psssdt_info = ExAllocatePool(NonPagedPool, sizeof(SSSDT_INFO));
 	SYSTEM_MODULE sysmodule = { 0 };
 	ULONG Inbuff;
 	ULONG64 Inbuff64;
@@ -251,8 +250,15 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 
 				if(NT_SUCCESS(GetProcessPathByPid((HANDLE)Inbuff,outbuff)))
 				{
-					memcpy(pIoBuffer,outbuff,260*2);
-					status = STATUS_SUCCESS;
+					__try {
+						memcpy(pIoBuffer, outbuff, 260 * 2);
+						status = STATUS_SUCCESS;
+					}
+					__except (1)
+					{
+						status = STATUS_UNSUCCESSFUL;
+					}
+					
 				}else
 				{
 					status = STATUS_UNSUCCESSFUL;
@@ -347,7 +353,7 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 					break;
 				}
 
-				
+				PSSSDT_INFO psssdt_info = ExAllocatePool(NonPagedPool, sizeof(SSSDT_INFO));
 
 				if (psssdt_info == NULL)
 				{
@@ -385,6 +391,8 @@ NTSTATUS DispatchIoctl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 					);
 
 					status = STATUS_SUCCESS;
+					ExFreePool(psssdt_info);
+					psssdt_info = NULL;
 					break;
 
 				}
@@ -816,11 +824,8 @@ Exit:
 		pIrp->IoStatus.Information = 0;	
 	pIrp->IoStatus.Status = status;
 	IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-	ExFreePool(outbuff);
-	if (psssdt_info)
-	{
-		ExFreePool(psssdt_info);
-	}
+	if(MmIsAddressValid(outbuff))
+		ExFreePool(outbuff);
 	//ExFreePool(Instrbuff); //释放就蓝屏??? 原因是想释放systembuff
 	return status;
 }
@@ -883,6 +888,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriverObj, PUNICODE_STRING pRegistryString)
 		IoDeleteDevice(pDevObj); 
 		return status;
 	}
+	//GetKernelModuleBase
+
 
 	KdPrint(("[ZhuHuiBeiShaDiAO]:DriverEntry\n"));
 

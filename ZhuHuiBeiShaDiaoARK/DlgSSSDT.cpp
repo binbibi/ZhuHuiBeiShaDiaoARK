@@ -1036,7 +1036,7 @@ ULONG64 CDlgSSSDT::GetWin32kBase()
 		if(CheckFileTrust(drv_path)==FALSE && (ULONG64)(pSystemModuleInformation->Module[i].Base) > (ULONG64)0x8000000000000000)
 		printf("%0.4ld\t0x%0.16llx\t%s\n",i,pSystemModuleInformation->Module[i].Base,AddTab(drv_path,48,4));
 		}*/
-		if (stricmp(pSystemModuleInformation->Module[i].ImageName + pSystemModuleInformation->Module[i].ModuleNameOffset, "win32k.sys") == 0)
+		if (_stricmp(pSystemModuleInformation->Module[i].ImageName + pSystemModuleInformation->Module[i].ModuleNameOffset, "win32k.sys") == 0)
 		{
 			qwBase = (ULONGLONG)pSystemModuleInformation->Module[i].Base;
 			break;

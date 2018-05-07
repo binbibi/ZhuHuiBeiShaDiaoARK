@@ -147,17 +147,23 @@ DWORD GetSSDTFunctionIndex(char *FunctionName)
 //负责传入Index和获取函数名
 void CDlgSSDT::EnumSSDT(void)
 {
-	CopyFileW(L"c:\\windows\\system32\\ntdll.dll",L"c:\\ntdll.txt",0);
-	DWORD fl = FileLen("c:\\ntdll.txt");
+	CString csSysroot;
+	CString str;
 	DWORD i = 0;
 	DWORD fs_pos = 0;
 	DWORD fe_pos = 0;
 	DWORD ssdt_fun_cnt = 0;
-	SSDT_INFO ssdt_addr_info = {0};
-	CString str;
+	SSDT_INFO ssdt_addr_info = { 0 };
+
 	DWORD dwRet = 0;
 	WCHAR	szSysRootBuff[MAX_PATH] = { 0 };
-	CString csSysroot;
+
+	if (!CopyFileW(L"c:\\windows\\system32\\ntdll.dll", L"c:\\ntdll.txt", 0))
+		goto __end;
+
+	DWORD fl = FileLen("c:\\ntdll.txt");
+	
+	//CString csSysroot;
 	GetWindowsDirectoryW(szSysRootBuff, MAX_PATH);
 	csSysroot.Format(L"%s", szSysRootBuff);
 	char func_name[MAX_PATH] = {0};
@@ -317,6 +323,7 @@ void CDlgSSDT::EnumSSDT(void)
 	}
 	//printf("0x%-0.3X\t%llx  %llx  %s\n",fn_index,ssdt_func_addr,ssdt_func_ori_addr,ntdlltxt);
 	ssdt_fun_cnt++;
+__end:
 	//显示ssdt表上的函数数
 	//printf("\nTotal of SSDT function: %ld\n",ssdt_fun_cnt);
 	str.Format(L"猪会被杀掉:[SSDT管理器]共有 %d 个SSDT函数",ssdt_fun_cnt);

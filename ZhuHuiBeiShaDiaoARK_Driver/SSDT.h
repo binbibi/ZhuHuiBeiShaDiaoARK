@@ -647,20 +647,17 @@ ULONG  MyRelocationTable(PVOID  NewImage,PVOID RawImage)
 	{   //得到需要更改数据的个数
 
 		uRelocTableSize = (pImageBaseRelocation->SizeOfBlock - 8) / 2;
+		
 		//循环遍历
+		WORD * pRelativeInfo = (WORD*)(pImageBaseRelocation + 1);
 		for (i = 0; i < uRelocTableSize; i++)
 		{//判断高4位是否等于3
-			Type = pImageBaseRelocation->TypeOffset[i] >> 12;
+			
+			Type = (*pRelativeInfo) >> 12;
 			if (Type == IMAGE_REL_BASED_DIR64)
 			{
 				//让指针指向要重定位的数据
-				uRelocAddress = (PVOID)((pImageBaseRelocation->TypeOffset[i] & 0xfff) + pImageBaseRelocation->VirtualAddress + (ULONG_PTR)NewImage);
-
-				//因为接下来的事要进行对地址的写入,所以判断下地址是否有效
-				if (!MmIsAddressValid(uRelocAddress))
-				{
-					continue;  //跳过本次循环然后,继续循环
-				}
+				uRelocAddress = (PVOID)(((*pRelativeInfo) & 0xfff) + pImageBaseRelocation->VirtualAddress + (ULONG_PTR)NewImage);
 
 				/*
 					偏移里边的数据才是要重新定位的全局变量数据
@@ -671,6 +668,7 @@ ULONG  MyRelocationTable(PVOID  NewImage,PVOID RawImage)
 				//DbgPrint("重定位后的地址%llx\r\n", *(ULONG_PTR*)uRelocAddress);
 
 			}
+			pRelativeInfo++;
 		}
 		//把指针移到下一个快,如果->SizeOfBlock为空了,表示没有块了退出循环
 		pImageBaseRelocation = (PIMAGE_BASE_RELOCATION)((ULONG_PTR)pImageBaseRelocation + pImageBaseRelocation->SizeOfBlock);

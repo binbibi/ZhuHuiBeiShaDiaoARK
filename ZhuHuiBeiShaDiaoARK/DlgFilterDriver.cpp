@@ -87,7 +87,7 @@
 #define FILE_DEVICE_TRUST_ENV           0x00000056
 */
 
-static CHAR *DeviceType[100] =
+static CHAR *strDeviceType[] =
 {
 	"BEEP"
 	,"CD_ROM"
@@ -248,12 +248,20 @@ void CDlgFilterDriver::EnumFilterDriver()
 	
 	ULONG Count =  pFltInfo[0].Count;
 	ULONG item = 0;
+	ULONG nstrDeviceType = sizeof(strDeviceType) / sizeof(strDeviceType[0]);
 
 	for (size_t i = 0; i < Count; i++)
 	{
 		item = m_list_filterDrv.GetItemCount();
-		str.Format(L"%S", DeviceType[pFltInfo[i].DeviceType]);
-
+		
+		if (pFltInfo[i].DeviceType < nstrDeviceType)
+		{
+			str.Format(L"%d--%S", pFltInfo[i].DeviceType,strDeviceType[pFltInfo[i].DeviceType]);
+		}
+		else
+		{
+			str.Format(L"FILE_DEVICE_%d", pFltInfo[i].DeviceType);
+		}
 		m_list_filterDrv.InsertItem(item, str);
 
 		str.Format(L"%s", pFltInfo[i].SysName);

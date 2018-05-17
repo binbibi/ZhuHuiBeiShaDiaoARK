@@ -6,6 +6,9 @@ ULONG ObjectCallbackListOffset = 0;
 
 extern	ULONG	offset_BasePriority;
 extern	ULONG	offset_kernelStack;
+extern  ULONG   offset_InitialStack;
+extern  ULONG   Offset_KTHREAD_MiscFlags;
+extern  ULONG   offset_Queue;
 extern	ULONG	offset_ThreadRoutine;
 extern	ULONG	FltFilterOperationsOffset;
 
@@ -41,8 +44,11 @@ BOOLEAN GetVersionAndHardCode()
 		#define Offset_ThreadRoutine 0x2d8
 		*/
 		offset_BasePriority = 0x1f1;
+		offset_Queue = 0xb0;
 		offset_kernelStack = 0x38;
-		offset_ThreadRoutine = 0x2d8;
+		offset_InitialStack = 0x28;
+		Offset_KTHREAD_MiscFlags = 0x4c;
+		offset_ThreadRoutine = 0x410;
 		FltFilterOperationsOffset = 0x188; //WIN7 OFFSET of fltmgr!_FLT_FILTER->PFLT_OPERATION_REGISTRATION
 		b = TRUE;
 		break;

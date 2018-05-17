@@ -352,6 +352,11 @@ NTSTATUS getSystemImageInfoByAddress(ULONG_PTR address,SYSTEM_MODULE* __out lpsy
 		return STATUS_UNSUCCESSFUL;
 	}
 
+	if (address == 0)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	sizeOfBuf = 0;
 
 

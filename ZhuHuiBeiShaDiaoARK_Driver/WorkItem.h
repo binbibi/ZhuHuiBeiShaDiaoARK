@@ -7,7 +7,35 @@
 
 ULONG	offset_BasePriority = 0;
 ULONG	offset_kernelStack = 0;
+ULONG   offset_InitialStack = 0;
+ULONG   offset_Queue = 0;
 ULONG	offset_ThreadRoutine = 0;
+ULONG   Offset_KTHREAD_MiscFlags = 0;
+
+typedef struct  _KTHREAD_MiscFlags
+{
+	ULONG KernelStackResident : 1;
+	ULONG ReadyTransition : 1;
+	ULONG ProcessReadyQueue : 1;
+	ULONG WaitNext : 1;
+	ULONG SystemAffinityActive : 1;
+	ULONG Alertable : 1;
+	ULONG GdiFlushActive : 1;
+	ULONG Reserved : 25;
+
+}KTHREAD_MiscFlags, *pKTHREAD_MiscFlags;
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+ZwQueryInformationThread(
+	IN HANDLE ThreadHandle,
+	IN THREADINFOCLASS ThreadInformationClass,
+	OUT PVOID ThreadInformation,
+	IN ULONG ThreadInformationLength,
+	OUT PULONG ReturnLength OPTIONAL
+);
+
 
 typedef struct _WORK_THRAD_INFO
 {
@@ -21,20 +49,36 @@ typedef struct _WORK_THRAD_INFO
 
 static char *WORD_TYPE[4] =
 {
+	"DelayedWorkQueue", //12
 	"CriticalWorkQueue",//13
-	"DelayedWorkQueue",//14
+	"UnKownWorkQueue",//14
 	"HyperCriticalWorkQueue"//15
 };
 
-BOOLEAN IsWorkThread(_In_ CHAR* pEThread, _Outptr_ ULONG *WordType)
+BOOLEAN IsWorkThread(_In_ BYTE* pEThread, _Outptr_ ULONG *WordType)
 {
 	CHAR tmp = 0;
+	if (PsIsThreadTerminating((PETHREAD)pEThread))
+	{
+		return FALSE;
+	}
+
+	if (!PsIsSystemThread((PETHREAD)pEThread))
+	{
+		return FALSE;
+	}
+	
 	__try {
 		tmp = *(pEThread + offset_BasePriority);
-		if (tmp > 12 && tmp <16)
+		if (tmp > 11 && tmp <16)
 		{
-			*WordType = tmp - 13;
-			return TRUE;
+			*WordType = tmp - 12;
+
+			if (*((PULONG_PTR)(pEThread+ offset_Queue)) != 0x0)
+			{
+				return TRUE;
+			}
+			
 		}
 	}
 	__except (1) {
@@ -49,11 +93,16 @@ PWORK_THREAD_INFO EnumWorkThread()
 	ULONG WorkType = 0;
 	ULONG Count = 0;
 	ULONG_PTR ThreadRoutine = 0;
-	CHAR*	  KernelStack = NULL;
+	ULONG_PTR WorkerRoutine = 0;
+	pKTHREAD_MiscFlags pkthread_miscflags = NULL;
+	ULONG_PTR*	   KernelStack = NULL;
+	ULONG_PTR*     KernelInitialStack = NULL;
 	PETHREAD pThread = NULL;
 	NTSTATUS status = STATUS_UNSUCCESSFUL;
 	PWORK_THREAD_INFO pWorkInfo = NULL;
 	SYSTEM_MODULE SystemModule = { 0 };
+	ULONG_PTR nCount = 0;
+	ULONG_PTR j = 0;
 
 	pWorkInfo = ExAllocatePool(NonPagedPool, sizeof(WORK_THREAD_INFO)*300);
 	if (pWorkInfo == NULL)
@@ -66,23 +115,49 @@ PWORK_THREAD_INFO EnumWorkThread()
 		status = PsLookupThreadByThreadId((HANDLE)i, &pThread);
 		if (NT_SUCCESS(status))
 		{
-			if (IsWorkThread((CHAR*)pThread, &WorkType))
+			if (IsWorkThread((BYTE*)pThread, &WorkType))
 			{
-				KernelStack = (CHAR*)(*((ULONG_PTR*)((CHAR*)pThread + offset_kernelStack)));
-				if (MmIsAddressValid(KernelStack) && MmIsAddressValid(KernelStack + offset_ThreadRoutine))
+				
+				KernelStack = (ULONG_PTR*)(*((PULONG_PTR)((CHAR*)pThread + offset_kernelStack)));
+				KernelInitialStack = (ULONG_PTR*)(*((ULONG_PTR*)((CHAR*)pThread + offset_InitialStack)));
+				ThreadRoutine = (ULONG_PTR)(*((ULONG_PTR*)((CHAR*)pThread + offset_ThreadRoutine)));
+				pkthread_miscflags =  (PBYTE)pThread + Offset_KTHREAD_MiscFlags;
+				
+				if (pkthread_miscflags->KernelStackResident)
 				{
-					ThreadRoutine = *(ULONG_PTR*)(KernelStack + offset_ThreadRoutine);
+					if (KernelStack > MmSystemRangeStart && KernelInitialStack > MmSystemRangeStart && ThreadRoutine > MmSystemRangeStart)
+					{
+						nCount = ((ULONG_PTR)KernelInitialStack - (ULONG_PTR)KernelStack) / sizeof(ULONG_PTR);
+
+						for (j = 0; j < nCount; j++)
+						{
+							if ((ThreadRoutine < *(KernelStack + j)) && (*(KernelStack + j) < ThreadRoutine + 0x100))
+							{
+								if (j > 6)
+								{
+									WorkerRoutine = *(KernelStack + j - 6);
+								}
+							}
+						}
+
+					}
+				}
+				
+				if (WorkerRoutine < (ULONG_PTR)MmSystemRangeStart)
+				{
+					WorkerRoutine = 0;
 				}
 
-				pWorkInfo[Count].ThreadId = i;
-				pWorkInfo[Count].eThread = pThread;
-				pWorkInfo[Count].WorkType = WorkType; // 已经减去13
+	
+				pWorkInfo[Count].ThreadId = (ULONG)i;
+				pWorkInfo[Count].eThread = (ULONG_PTR)pThread;
+				pWorkInfo[Count].WorkType = WorkType; // 已经减去12
 
-				if (ThreadRoutine > MmUserProbeAddress)
+				if (WorkerRoutine)
 				{
-					pWorkInfo[Count].ThreadRoutine = ThreadRoutine;
+					pWorkInfo[Count].ThreadRoutine = WorkerRoutine;
 
-					if (NT_SUCCESS(getSystemImageInfoByAddress(ThreadRoutine, &SystemModule)) && strlen(SystemModule.ImageName) < MAX_PATH)
+					if (NT_SUCCESS(getSystemImageInfoByAddress(WorkerRoutine, &SystemModule)) && strlen(SystemModule.ImageName) < MAX_PATH)
 					{
 						// 惊现BUG !!!
 						RtlCopyMemory(pWorkInfo[Count].ImgPath, SystemModule.ImageName, MAX_PATH);

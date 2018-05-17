@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZhuHuiBeiShaDiaoARK", "ZhuHuiBeiShaDiaoARK\ZhuHuiBeiShaDiaoARK.vcxproj", "{72AE032F-F171-49A9-91AB-2D4720194DCA}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZhuHuiBeiShaDiaoARK_Driver", "ZhuHuiBeiShaDiaoARK_Driver\ZhuHuiBeiShaDiaoARK_Driver.vcxproj", "{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}"
@@ -93,8 +95,8 @@ Global
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|Win32.ActiveCfg = Win7 Release|Win32
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|Win32.Build.0 = Win7 Release|Win32
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|Win32.Deploy.0 = Win7 Release|Win32
-		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|x64.ActiveCfg = Win7 Debug|x64
-		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|x64.Build.0 = Win7 Debug|x64
+		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|x64.ActiveCfg = Win7 Release|x64
+		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win7 Release|x64.Build.0 = Win7 Release|x64
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win8 Debug|Win32.ActiveCfg = Win8 Debug|Win32
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win8 Debug|Win32.Build.0 = Win8 Debug|Win32
 		{1ADB5445-6B4F-4CCD-90E8-5D5D06F2E875}.Win8 Debug|Win32.Deploy.0 = Win8 Debug|Win32

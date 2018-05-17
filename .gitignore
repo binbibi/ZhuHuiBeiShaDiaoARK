@@ -82,3 +82,13 @@ Temporary Items
 
 # Sln files
 *.suo
+
+# tlog
+*.tlog
+*.idb
+*.pdb
+*.log
+*.ipch
+*.db
+*.opendb
+
